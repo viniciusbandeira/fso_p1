@@ -62,11 +62,11 @@ int main() {
     pid_t pid = fork();
     if (pid > 0)
     {
-    	sendmsg();
+        receivemsg();   
     }
     else if (pid == 0)
     {
-	 	receivemsg();   
+        sendmsg();
     }
     else
     {

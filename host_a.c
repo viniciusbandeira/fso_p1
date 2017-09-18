@@ -12,6 +12,31 @@ struct msgbuf
     long    mtype;
     char    mtext[MAXSIZE];
 };
+void create_shared_memory(){
+    int shmid;
+    key_t key;
+    char *shm;
+    char *s;
+    
+    key = 1234;
+
+    shmid = shmget(key, SH_SIZE, IPC_CREAT | 0666);
+    
+    if(shmid < 0)
+    {
+        perror("shmget");
+        exit(1);
+    }
+
+    shm = shmat(shmid, NULL, 0);
+
+    if(shm == (char *) -1)
+    {
+        perror("shmat");
+        exit(1);
+    }
+}
+
 void sendmsg() {
 	int queueid;
 	key_t key = 1234;
@@ -37,7 +62,8 @@ void sendmsg() {
 void receivemsg() {
 	int queueid;
 	key_t key = 1234;
-	struct msgbuf rbuf;
+    struct msgbuf rbuf;
+    struct msqid_ds buf;
 
 	if ((queueid = msgget(key, 0666)) < 0)
 	{
@@ -47,15 +73,28 @@ void receivemsg() {
 
   	while(1) 
   	{
-  		if (msgrcv(queueid, &rbuf, MAXSIZE, 1, 0) < 0) 
-  		{
-     		printf ("ERRO AO RECEBER MENSAGEM");
-	        exit(1);
-  		}
+        sleep(3);
+        if(msgctl(queueid, IPC_STAT, &buf) != 0)
+        {
+            perror("msgctl");
+            exit(1);
+        }
+        while((int *)buf.msg_qnum > 0)
+        {
+            if (msgrcv(queueid, &rbuf, MAXSIZE, 1, 0) < 0) 
+            {
+                printf ("ERRO AO RECEBER MENSAGEM");
+                exit(1);
+            }
+            if(msgctl(queueid, IPC_STAT, &buf) != 0)
+            {
+                perror("msgctl");
+                exit(1);
+            }
 
-		printf("volta: %s\n", rbuf.mtext);
-		sleep(3);
-  	}
+
+        }
+    }
 }
 int main() {
 	
