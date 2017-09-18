@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     char *shm;
     char *s;
     
-    key = 1234;
+    key = 9876;
 
     shmid = shmget(key, SH_SIZE, 0666);
     

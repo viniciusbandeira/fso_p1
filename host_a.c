@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/shm.h>
+
 #define MAXSIZE 144
 
 struct msgbuf
@@ -12,30 +14,7 @@ struct msgbuf
     long    mtype;
     char    mtext[MAXSIZE];
 };
-void create_shared_memory(){
-    int shmid;
-    key_t key;
-    char *shm;
-    char *s;
-    
-    key = 1234;
 
-    shmid = shmget(key, SH_SIZE, IPC_CREAT | 0666);
-    
-    if(shmid < 0)
-    {
-        perror("shmget");
-        exit(1);
-    }
-
-    shm = shmat(shmid, NULL, 0);
-
-    if(shm == (char *) -1)
-    {
-        perror("shmat");
-        exit(1);
-    }
-}
 
 void sendmsg() {
 	int queueid;
@@ -61,9 +40,29 @@ void sendmsg() {
 }
 void receivemsg() {
 	int queueid;
-	key_t key = 1234;
+    key_t key = 1234;
+    key_t key_shm = 9876;
     struct msgbuf rbuf;
     struct msqid_ds buf;
+    int shmid;
+    char *shm;
+    char *s;
+    
+    shmid = shmget(key_shm, MAXSIZE, IPC_CREAT | 0666);
+    
+    if(shmid < 0)
+    {
+        perror("shmget");
+        exit(1);
+    }
+
+    shm = shmat(shmid, NULL, 0);
+
+    if(shm == (char *) -1)
+    {
+        perror("shmat");
+        exit(1);
+    }
 
 	if ((queueid = msgget(key, 0666)) < 0)
 	{
@@ -73,7 +72,7 @@ void receivemsg() {
 
   	while(1) 
   	{
-        sleep(3);
+        sleep(0);
         if(msgctl(queueid, IPC_STAT, &buf) != 0)
         {
             perror("msgctl");
@@ -91,8 +90,11 @@ void receivemsg() {
                 perror("msgctl");
                 exit(1);
             }
-
-
+            memcpy(shm, rbuf.mtext,strlen(rbuf.mtext));
+            while(*shm != '*')
+            {
+                sleep (1);
+            }
         }
     }
 }
